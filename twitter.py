@@ -2801,7 +2801,7 @@ class Api(object):
                             for x in status.split(' ')])
     return len(shortened)
 
-  def PostUpdate(self, status, in_reply_to_status_id=None):
+  def PostUpdate(self, status, in_reply_to_status_id=None, latitude=None, longitude=None):
     '''Post a twitter status message from the authenticated user.
 
     The twitter.Api instance must be authenticated.
@@ -2836,6 +2836,9 @@ class Api(object):
     data = {'status': status}
     if in_reply_to_status_id:
       data['in_reply_to_status_id'] = in_reply_to_status_id
+    if latitude and longitude:
+      data['lat'] = latitude
+      data['long'] = longitude
     json = self._FetchUrl(url, post_data=data)
     data = self._ParseAndCheckTwitter(json)
     return Status.NewFromJsonDict(data)
