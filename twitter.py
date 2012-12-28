@@ -3071,6 +3071,8 @@ class Api(object):
       if 'next_cursor' in data:
         if data['next_cursor'] == 0 or data['next_cursor'] == data['previous_cursor']:
           break
+        else:
+          cursor = data['next_cursor']
       else:
         break
     return result
