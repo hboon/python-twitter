@@ -3046,7 +3046,7 @@ class Api(object):
     data = self._ParseAndCheckTwitter(json)
     return data
 
-  def GetFollowers(self, cursor=-1):
+  def GetFollowers(self, cursor=-1, maximum_count=-1):
     '''Fetch the sequence of twitter.User instances, one for each follower
 
     The twitter.Api instance must be authenticated.
@@ -3055,6 +3055,8 @@ class Api(object):
       cursor:
         Specifies the Twitter API Cursor location to start at. [Optional]
         Note: there are pagination limits.
+      maximum_count:
+        Specifies maximum number of followers to be returned. This is useful because some Twitter users have many followers and fetching a complete list is very time consuming [Optional]
 
     Returns:
       A sequence of twitter.User instances, one for each follower
@@ -3068,6 +3070,8 @@ class Api(object):
       json = self._FetchUrl(url, parameters=parameters)
       data = self._ParseAndCheckTwitter(json)
       result += [User.NewFromJsonDict(x) for x in data['users']]
+      if maximum_count != -1 and len(result) >= maximum_count:
+        return result
       if 'next_cursor' in data:
         if data['next_cursor'] == 0 or data['next_cursor'] == data['previous_cursor']:
           break
