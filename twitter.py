@@ -2980,30 +2980,40 @@ class Api(object):
     data = self._ParseAndCheckTwitter(json)
     return [Status.NewFromJsonDict(s) for s in data]
 
-  def GetFriends(self, user=None, cursor=-1):
-    '''Fetch the sequence of twitter.User instances, one for each friend.
+  def GetFriends(self, cursor=-1, maximum_count=-1):
+    '''Fetch the sequence of twitter.User instances, one for each following
 
     The twitter.Api instance must be authenticated.
 
     Args:
-      user:
-        The twitter name or id of the user whose friends you are fetching.
-        If not specified, defaults to the authenticated user. [Optional]
+      cursor:
+        Specifies the Twitter API Cursor location to start at. [Optional]
+        Note: there are pagination limits.
+      maximum_count:
+        Specifies maximum number of followings to be returned. This is useful because some Twitter users have many followings and fetching a complete list is very time consuming [Optional]
 
     Returns:
-      A sequence of twitter.User instances, one for each friend
+      A sequence of twitter.User instances, one for each following
     '''
-    if not user and not self._oauth_consumer:
+    if not self._oauth_consumer:
       raise TwitterError("twitter.Api instance must be authenticated")
-    if user:
-      url = '%s/statuses/friends/%s.json' % (self.base_url, user)
-    else:
-      url = '%s/statuses/friends.json' % self.base_url
-    parameters = {}
-    parameters['cursor'] = cursor
-    json = self._FetchUrl(url, parameters=parameters)
-    data = self._ParseAndCheckTwitter(json)
-    return [User.NewFromJsonDict(x) for x in data['users']]
+    url = '%s/statuses/friends.json' % self.base_url
+    result = []
+    while True:
+      parameters = { 'cursor': cursor }
+      json = self._FetchUrl(url, parameters=parameters)
+      data = self._ParseAndCheckTwitter(json)
+      result += [User.NewFromJsonDict(x) for x in data['users']]
+      if maximum_count != -1 and len(result) >= maximum_count:
+        return result
+      if 'next_cursor' in data:
+        if data['next_cursor'] == 0 or data['next_cursor'] == data['previous_cursor']:
+          break
+        else:
+          cursor = data['next_cursor']
+      else:
+        break
+    return result
 
   def GetFriendIDs(self, user=None, cursor=-1):
       '''Returns a list of twitter user id's for every person
