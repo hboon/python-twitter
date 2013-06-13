@@ -3286,7 +3286,7 @@ class Api(object):
     Returns:
       A twitter.Status instance representing the newly-marked favorite.
     '''
-    url  = '%s/favorites/create/%s.json' % (self.base_url, status.id)
+    url  = '%s/favorites/create.json' % (self.base_url)
     json = self._FetchUrl(url, post_data={'id': status.id})
     data = self._ParseAndCheckTwitter(json)
     return Status.NewFromJsonDict(data)
