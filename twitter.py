@@ -2997,7 +2997,7 @@ class Api(object):
     '''
     if not self._oauth_consumer:
       raise TwitterError("twitter.Api instance must be authenticated")
-    url = '%s/statuses/friends.json' % self.base_url
+    url = '%s/friends/list.json' % self.base_url
     result = []
     while True:
       parameters = { 'cursor': cursor }
@@ -3073,7 +3073,7 @@ class Api(object):
     '''
     if not self._oauth_consumer:
       raise TwitterError("twitter.Api instance must be authenticated")
-    url = '%s/statuses/followers.json' % self.base_url
+    url = '%s/followers/list.json' % self.base_url
     result = []
     while True:
       parameters = { 'cursor': cursor }
