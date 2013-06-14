@@ -127,6 +127,7 @@ class Status(object):
                urls=None,
                user_mentions=None,
                hashtags=None,
+               media=None,
                geo=None,
                place=None,
                coordinates=None,
@@ -187,6 +188,7 @@ class Status(object):
     self.urls = urls
     self.user_mentions = user_mentions
     self.hashtags = hashtags
+    self.media = media
     self.geo = geo
     self.place = place
     self.coordinates = coordinates
@@ -614,6 +616,7 @@ class Status(object):
     urls = None
     user_mentions = None
     hashtags = None
+    media = None
     if 'entities' in data:
       if 'urls' in data['entities']:
         urls = [Url.NewFromJsonDict(u) for u in data['entities']['urls']]
@@ -621,6 +624,8 @@ class Status(object):
         user_mentions = [User.NewFromJsonDict(u) for u in data['entities']['user_mentions']]
       if 'hashtags' in data['entities']:
         hashtags = [Hashtag.NewFromJsonDict(h) for h in data['entities']['hashtags']]
+      if 'media' in data['entities']:
+        media = [Media.NewFromJsonDict(m) for m in data['entities']['media']]
     return Status(created_at=data.get('created_at', None),
                   favorited=data.get('favorited', None),
                   id=data.get('id', None),
@@ -636,6 +641,7 @@ class Status(object):
                   urls=urls,
                   user_mentions=user_mentions,
                   hashtags=hashtags,
+                  media=media,
                   geo=data.get('geo', None),
                   place=data.get('place', None),
                   coordinates=data.get('coordinates', None),
@@ -2033,6 +2039,29 @@ class Hashtag(object):
     '''
     return Hashtag(text = data.get('text', None))
 
+class Media(object):
+  ''' A class represeinting a twitter media
+  '''
+  def __init__(self,
+               media_type=None,
+               media_url=None):
+    self.media_type = media_type
+    self.media_url = media_url
+
+  @staticmethod
+  def NewFromJsonDict(data):
+    '''Create a new instance based on a JSON dict.
+
+    Args:
+      data:
+        A JSON dict, as converted from the JSON in the twitter API
+
+    Returns:
+      A twitter.Media instance
+    '''
+    return Media(media_url=data.get('media_url'),
+                media_type=data.get('type'))
+
 class Trend(object):
   ''' A class representing a trending topic
   '''
@@ -2351,10 +2380,8 @@ class Api(object):
                 geocode=None,
                 since_id=None,
                 per_page=15,
-                page=1,
                 lang="en",
-                show_user="true",
-                query_users=False):
+                next_url=None):
     '''Return twitter search results for a given term.
 
     Args:
@@ -2371,63 +2398,51 @@ class Api(object):
         [Optional]
       per_page:
         number of results to return.  Default is 15 [Optional]
-      page:
-        Specifies the page of results to retrieve.
-        Note: there are pagination limits. [Optional]
       lang:
         language for results.  Default is English [Optional]
-      show_user:
-        prefixes screen name in status
-      query_users:
-        If set to False, then all users only have screen_name and
-        profile_image_url available.
-        If set to True, all information of users are available,
-        but it uses lots of request quota, one per status.
 
     Returns:
       A sequence of twitter.Status instances, one for each message containing
       the term
     '''
+    if term is None and next_url is None:
+      return [[], None]
+
     # Build request parameters
     parameters = {}
 
-    if since_id:
-      parameters['since_id'] = since_id
-
-    if term is None and geocode is None:
-      return []
-
-    if term is not None:
-      parameters['q'] = term
-
-    if geocode is not None:
-      parameters['geocode'] = ','.join(map(str, geocode))
-
-    parameters['show_user'] = show_user
-    parameters['lang'] = lang
-    parameters['rpp'] = per_page
-    parameters['page'] = page
-
     # Make and send requests
-    url  = 'http://search.twitter.com/search.json'
+    if next_url is None:
+      url  = '%s/search/tweets.json' % self.base_url
+
+      if since_id:
+        parameters['since_id'] = since_id
+  
+      if term is not None:
+        parameters['q'] = term
+  
+      if geocode is not None:
+        parameters['geocode'] = ','.join(map(str, geocode))
+  
+      parameters['lang'] = lang
+      parameters['count'] = per_page
+    else:
+      url = '{}/search/tweets.json{}'.format(self.base_url, next_url)
     json = self._FetchUrl(url, parameters=parameters)
     data = self._ParseAndCheckTwitter(json)
 
     results = []
 
-    for x in data['results']:
+    for x in data['statuses']:
       temp = Status.NewFromJsonDict(x)
-
-      if query_users:
-        # Build user object with new request
-        temp.user = self.GetUser(urllib.quote(x['from_user']))
-      else:
-        temp.user = User(screen_name=x['from_user'], profile_image_url=x['profile_image_url'])
 
       results.append(temp)
 
     # Return built list of statuses
-    return results # [Status.NewFromJsonDict(x) for x in data['results']]
+    if data['search_metadata'].get('next_results') is not None:
+      return [results, data['search_metadata']['next_results']]
+    else:
+      return [results, None]
 
   def GetTrendsCurrent(self, exclude=None):
     '''Get the current top trending topics
