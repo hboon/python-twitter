@@ -3014,20 +3014,23 @@ class Api(object):
       raise TwitterError("twitter.Api instance must be authenticated")
     url = '%s/friends/list.json' % self.base_url
     result = []
-    while True:
-      parameters = { 'cursor': cursor }
-      json = self._FetchUrl(url, parameters=parameters)
-      data = self._ParseAndCheckTwitter(json)
-      result += [User.NewFromJsonDict(x) for x in data['users']]
-      if maximum_count != -1 and len(result) >= maximum_count:
-        return result
-      if 'next_cursor' in data:
-        if data['next_cursor'] == 0 or data['next_cursor'] == data['previous_cursor']:
-          break
+    try:
+      while True:
+        parameters = { 'cursor': cursor }
+        json = self._FetchUrl(url, parameters=parameters)
+        data = self._ParseAndCheckTwitter(json)
+        result += [User.NewFromJsonDict(x) for x in data['users']]
+        if maximum_count != -1 and len(result) >= maximum_count:
+          return result
+        if 'next_cursor' in data:
+          if data['next_cursor'] == 0 or data['next_cursor'] == data['previous_cursor']:
+            break
+          else:
+            cursor = data['next_cursor']
         else:
-          cursor = data['next_cursor']
-      else:
-        break
+          break
+    except Exception as ex:
+      print 'Exception {} GetFriends() {}'.format(ex, len(result))
     return result
 
   def GetFriendIDs(self, user=None, cursor=-1):
@@ -3090,20 +3093,23 @@ class Api(object):
       raise TwitterError("twitter.Api instance must be authenticated")
     url = '%s/followers/list.json' % self.base_url
     result = []
-    while True:
-      parameters = { 'cursor': cursor }
-      json = self._FetchUrl(url, parameters=parameters)
-      data = self._ParseAndCheckTwitter(json)
-      result += [User.NewFromJsonDict(x) for x in data['users']]
-      if maximum_count != -1 and len(result) >= maximum_count:
-        return result
-      if 'next_cursor' in data:
-        if data['next_cursor'] == 0 or data['next_cursor'] == data['previous_cursor']:
-          break
+    try:
+      while True:
+        parameters = { 'cursor': cursor }
+        json = self._FetchUrl(url, parameters=parameters)
+        data = self._ParseAndCheckTwitter(json)
+        result += [User.NewFromJsonDict(x) for x in data['users']]
+        if maximum_count != -1 and len(result) >= maximum_count:
+          return result
+        if 'next_cursor' in data:
+          if data['next_cursor'] == 0 or data['next_cursor'] == data['previous_cursor']:
+            break
+          else:
+            cursor = data['next_cursor']
         else:
-          cursor = data['next_cursor']
-      else:
-        break
+          break
+    except Exception as ex:
+      print 'Exception {} GetFollowers() {}'.format(ex, len(result))
     return result
 
   def GetFeatured(self):
